@@ -1,4 +1,5 @@
 import streamlit as st
+import os 
 from streamlit_echarts import st_echarts
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -17,6 +18,10 @@ from imblearn.over_sampling import RandomOverSampler
 # https://plotly.com/python/plotly-express/
 import plotly.express as px  # pip install plotly-express
 
+# pip install git+https://github.com/streamlit/files-connection
+from st_files_connection import FilesConnection
+import boto3
+from datasets import load_dataset
 
 def load_lottieurl(url):
     request = requests.get(url)
@@ -804,15 +809,85 @@ def projectpage():
         st_echarts(liquidfill_option)
 
 
+def projectpage_two():
+
+    
+    filename = 'goodreads_data.csv'
+    # Create connection object and retrieve file contents.
+    # Specify input format is a csv and to cache the result for 600 seconds.
+    # conn = st.experimental_connection('s3', type=FilesConnection)
+    # df = conn.read("mlops-pycaret-fastapi/goodreads_data.csv", input_format="csv", ttl=600)
+    file_path = os.getcwd()
+
+    if os.path.exists(file_path + '/' + filename) == False:
+        with st.snow():    
+            try:
+
+                client = boto3.client(
+                    's3',
+                    aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
+                    aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"]
+                )
+
+                client.download_file('mlops-pycaret-fastapi', 'goodreads_data.csv', 'goodreads_data.csv')
+
+            except Exception as error:
+                print(f"File download was unsuccessful. Error in more detail: { error }")
+
+    
+    # st.dataframe(df)
+
+    st.header('AWS S3 data injest')
+    st.write('##')
+    st.write('---')
+
+    data = pd.read_csv(filename)
+    df = pd.DataFrame(data)
+    st.dataframe(df)
+
+def projectpage_three():
+
+    with st.snow():    
+        try:
+
+            dataset = load_dataset("tasksource/bigbench",'movie_recommendation')
+
+            df = pd.DataFrame(dataset["train"][:])
+
+            df_v = pd.DataFrame(dataset["validation"][:])
+
+            
+
+        except Exception as error:
+            print(f"File download was unsuccessful. Error in more detail: { error }")
+
+    st.header('Hugging Face Dataset - tasksource/bigbench - movie_recommendation')
+    st.write('---')
+    st.subheader('Hugging Face Train Dataset')
+    st.write('##')
+    st.dataframe(df)
+    st.write('##')
+    st.subheader('Hugging Face Validation Dataset')
+    st.write('##')
+    st.dataframe(df_v)
+
+
 def navigation():
 
-    current_page = st.sidebar.selectbox('Select a page', ('Home', 'Project #1'))
+    current_page = st.sidebar.selectbox('Select a page', ('Home', 'Project #1', 'Project #2', 'Project #3'))
     
     if current_page == 'Home':
         homepage()
 
     elif current_page == 'Project #1':
         projectpage()
+    
+    elif current_page == 'Project #2':
+
+        projectpage_two()
+    
+    elif current_page == 'Project #3':
+        projectpage_three()
 
     
 
